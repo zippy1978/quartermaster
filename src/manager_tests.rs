@@ -103,3 +103,38 @@ async fn run_parallel() {
     assert_eq!(results.read().await[1], "3");
     assert_eq!(results.read().await[2], "2");
 }
+
+
+#[tokio::test]
+async fn get_state() {
+    let results = Arc::new(RwLock::new(vec![]));
+
+    let manager = TaskManager::<InMemoryTaskStore>::new("manager", 2);
+
+    manager
+        .run(Box::new(TestTask {
+            id: "1".to_string(),
+            sleep_millis: 10,
+            results: results.clone(),
+        }))
+        .await;
+    manager
+        .run(Box::new(TestTask {
+            id: "2".to_string(),
+            sleep_millis: 50,
+            results: results.clone(),
+        }))
+        .await;
+    manager
+        .run(Box::new(TestTask {
+            id: "3".to_string(),
+            sleep_millis: 5,
+            results: results.clone(),
+        }))
+        .await;
+
+    let state = manager.get_state().await;
+
+    assert_eq!(state.len(), 3);
+    
+}

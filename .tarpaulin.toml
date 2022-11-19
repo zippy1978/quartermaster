@@ -1,0 +1,8 @@
+[test_config]
+engine = "Llvm"
+follow-exec = true
+skip-clean = true
+
+[report]
+#out = ["Html", "Lcov"]
+out = ["Lcov"]

@@ -114,3 +114,24 @@ async fn clear() {
     mem_store.clear().await.unwrap();
     assert_eq!(mem_store.count_tasks().await.unwrap(), 0 as usize);
 }
+
+#[tokio::test]
+async fn get_all_states() {
+    let mem_store = InMemoryTaskStore::new("test_manager", None);
+    mem_store
+        .save_state(&TestTask {
+            id: "1".to_string(),
+        })
+        .await
+        .unwrap();
+    mem_store
+        .save_state(&TestTask {
+            id: "2".to_string(),
+        })
+        .await
+        .unwrap();
+    let states = mem_store.get_all_states().await.unwrap();
+    assert_eq!(states.len(), 2 as usize);
+    assert!(states.iter().find(|s| s.id == "1").is_some());
+    assert!(states.iter().find(|s| s.id == "2").is_some());
+}
