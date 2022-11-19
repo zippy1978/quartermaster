@@ -14,23 +14,33 @@ pub struct InMemoryTaskStore {
     states: Arc<RwLock<HashSet<TaskState>>>,
 }
 
-impl InMemoryTaskStore {}
-
-#[async_trait]
-impl TaskStore for InMemoryTaskStore {
-    fn new(manager: &str, _instance: Option<String>) -> Self {
+impl InMemoryTaskStore {
+    /// Create a new task store
+    pub fn new(manager_name: &str) -> Self {
         Self {
-            manager: manager.to_string(),
+            manager: manager_name.to_string(),
             states: Arc::new(RwLock::new(HashSet::new())),
         }
     }
+}
 
+#[async_trait]
+impl TaskStore for InMemoryTaskStore {
+    fn manager_name(&self) -> String {
+        self.manager.clone()
+    }
+    
+    async fn init(&self) -> Result<(), TaskStoreError> {
+        // Nothing to initialize
+        Ok(())
+    }
     async fn save_state(&self, task: &dyn Task) -> Result<TaskState, TaskStoreError> {
         // Insert new task state
         let state = TaskState {
-            id: task.id(),
-            name: task.name(),
-            manager: self.manager.to_string(),
+            id: None,
+            task_id: task.id(),
+            task_name: task.name(),
+            task_manager: self.manager.to_string(),
             instance: None,
             status: super::TaskStatus::Pending,
             creation_time: now_secs(),
@@ -61,7 +71,7 @@ impl TaskStore for InMemoryTaskStore {
             .await
             .clone()
             .into_iter()
-            .find(|s| s.id == task.id() && s.name == task.name()))
+            .find(|s| s.task_id == task.id() && s.task_name == task.name()))
     }
 
     async fn count_tasks(&self) -> Result<usize, TaskStoreError> {

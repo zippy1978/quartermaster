@@ -31,7 +31,7 @@ impl Task for TestTask {
 async fn run_serial() {
     let results = Arc::new(RwLock::new(vec![]));
 
-    let manager = TaskManager::<InMemoryTaskStore>::new("manager", 1);
+    let manager = TaskManager::new(InMemoryTaskStore::new("manager"), 1);
 
     manager
         .run(Box::new(TestTask {
@@ -70,7 +70,7 @@ async fn run_serial() {
 async fn run_parallel() {
     let results = Arc::new(RwLock::new(vec![]));
 
-    let manager = TaskManager::<InMemoryTaskStore>::new("manager", 2);
+    let manager = TaskManager::new(InMemoryTaskStore::new("manager"), 2);
 
     manager
         .run(Box::new(TestTask {
@@ -109,7 +109,7 @@ async fn run_parallel() {
 async fn get_state() {
     let results = Arc::new(RwLock::new(vec![]));
 
-    let manager = TaskManager::<InMemoryTaskStore>::new("manager", 2);
+    let manager = TaskManager::new(InMemoryTaskStore::new("manager"), 2);
 
     manager
         .run(Box::new(TestTask {

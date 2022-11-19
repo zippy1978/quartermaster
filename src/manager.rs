@@ -4,8 +4,7 @@ use async_trait::async_trait;
 use tokio::sync::RwLock;
 
 use crate::{
-    store::{TaskStatus, TaskStore, TaskState},
-    task::Task,
+    task::Task, store::{TaskStore, state::{TaskStatus, TaskState}},
 };
 
 type TaskQueue = deadqueue::unlimited::Queue<Box<dyn Task>>;
@@ -47,12 +46,12 @@ where
 
 impl<S: TaskStore + 'static> TaskManager<S> {
     /// Create a new task manager.
-    pub fn new(name: &str, worker_count: usize) -> Self {
+    pub fn new(store: S, worker_count: usize) -> Self {
         Self {
             queue: Arc::new(TaskQueue::new()),
-            name: name.to_string(),
+            name: store.manager_name(),
             worker_count,
-            store: Arc::new(S::new(name, None)),
+            store: Arc::new(store),
             started: Arc::new(RwLock::new(false)),
         }
     }
@@ -116,6 +115,15 @@ impl<S: TaskStore + 'static> TaskManager<S> {
         if *self.started.read().await {
             log::warn!("task manager `{}` is already stared", self.name);
             return;
+        }
+
+        // initialized store
+        if let Some(err) = self.store.init().await.err() {
+            log::error!(
+                "task manager `{}` failed to initialize store: {}",
+                self.name,
+                err.to_string()
+            );
         }
 
         // Clear state

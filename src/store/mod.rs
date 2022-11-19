@@ -4,31 +4,15 @@ use async_trait::async_trait;
 
 use crate::task::Task;
 
+use self::state::{TaskState, TaskStatus};
+
+pub mod state;
 pub mod memory;
 #[cfg(test)]
 pub mod memory_tests;
+#[cfg(feature = "mongodb")]
+pub mod mongodb;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum TaskStatus {
-    Pending,
-    Running,
-}
-
-impl Display for TaskStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-#[derive(Eq, Hash, PartialEq, Clone)]
-pub struct TaskState {
-    pub id: String,
-    pub name: String,
-    pub manager: String,
-    pub instance: Option<String>,
-    pub status: TaskStatus,
-    pub creation_time: u64,
-}
 
 #[derive(Debug)]
 pub enum TaskStoreError {
@@ -47,9 +31,10 @@ impl Display for TaskStoreError {
 /// In charge of keeping track of a manager task states.
 #[async_trait]
 pub trait TaskStore: Sized + Send + Sync + Clone {
-    /// Create a new task store
-    fn new(manager: &str, instance: Option<String>) -> Self;
-    /// Create a new task state from a task.
+    /// Get manager name.
+    fn manager_name(&self) -> String;
+    /// Initialize tas store.
+    async fn init(&self) -> Result<(), TaskStoreError>;
     /// If successful, return a task state with a unique identifier.
     async fn save_state(&self, task: &dyn Task) -> Result<TaskState, TaskStoreError>;
     /// Delete task state.
@@ -59,7 +44,11 @@ pub trait TaskStore: Sized + Send + Sync + Clone {
     /// Count running tasks.
     async fn count_tasks(&self) -> Result<usize, TaskStoreError>;
     /// Update task status.
-    async fn update_status(&self, task: &dyn Task, status: TaskStatus) -> Result<(), TaskStoreError>;
+    async fn update_status(
+        &self,
+        task: &dyn Task,
+        status: TaskStatus,
+    ) -> Result<(), TaskStoreError>;
     /// Clear store.
     async fn clear(&self) -> Result<(), TaskStoreError>;
     /// Return all the task states of the store.

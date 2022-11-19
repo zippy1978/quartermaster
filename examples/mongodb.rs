@@ -1,8 +1,16 @@
+#![cfg_attr(not(feature = "mongodb"), allow(unused_imports, dead_code))]
+
 use std::time::Duration;
 
 use async_trait::async_trait;
-use quartermaster::{manager::TaskManager, store::memory::InMemoryTaskStore, task::Task};
+#[cfg(feature = "mongodb")]
+use quartermaster::store::mongodb::MongoDBTaskStore;
+use quartermaster::{manager::TaskManager, task::Task};
+use std::sync::Arc;
 use tokio::time::sleep;
+
+#[cfg(feature = "mongodb")]
+use mongodb::Client;
 
 // A simple task printing hello after a delay
 // name + id make a task unique
@@ -32,10 +40,18 @@ impl Task for DelayedHelloTask {
     }
 }
 
+#[cfg(feature = "mongodb")]
 #[tokio::main]
 async fn main() {
-    // Create task manager with in memory state storage and 3 workers
-    let tm = TaskManager::new(InMemoryTaskStore::new("manager"), 2);
+    // Create database connection
+    let client = Client::with_uri_str("mongodb://localhost:27017")
+        .await
+        .unwrap();
+    let db = Arc::new(client.database("quartermaster"));
+
+    // Create task manager
+    // Instance name should be unique to your server instance
+    let tm = TaskManager::new(MongoDBTaskStore::new("manager", "instance", db.clone()), 2);
 
     // Run tasks on the manager
     tm.run(Box::new(DelayedHelloTask {
@@ -49,16 +65,6 @@ async fn main() {
     }))
     .await;
 
-    // Get task manager state
-    tm.get_state()
-        .await
-        .iter()
-        .for_each(|s| println!("name = [{}], id = [{}], creation time = [{}], status = [{}]", s.task_name, s.task_id, s.creation_time, s.status));
-    // Output
-    //name = [delayed_hello], id = [Homer], creation time = [1668816441], status = [Pending]
-    //name = [delayed_hello], id = [Bart], creation time = [1668816441], status = [Pending]
-
-
     // Stop the task manager
     tm.stop().await;
 
@@ -70,4 +76,12 @@ async fn main() {
     // Result output:
     // Hello Homer !
     // Hello Bart !
+}
+
+#[cfg(not(feature = "mongodb"))]
+fn main() {
+    println!(
+        r#"Please enable feature "mongodb", try:
+    cargo run --features="mongodb" --example mongodb"#
+    );
 }
