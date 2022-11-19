@@ -1,0 +1,31 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - 'develop'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      - 
+        name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+      - 
+        name: Setup cache
+        uses: Swatinem/rust-cache@v2
+      - 
+        name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
