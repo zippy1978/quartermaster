@@ -33,4 +33,5 @@ jobs:
         name: Run tests [mongodb] feature
         uses: actions-rs/cargo@v1
         with:
-          command: test --features mongodb
+          command: test 
+          args: --features mongodb
