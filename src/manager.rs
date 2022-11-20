@@ -4,7 +4,11 @@ use async_trait::async_trait;
 use tokio::sync::RwLock;
 
 use crate::{
-    task::Task, store::{TaskStore, state::{TaskStatus, TaskState}},
+    store::{
+        state::{TaskState, TaskStatus},
+        TaskStore,
+    },
+    task::Task,
 };
 
 type TaskQueue = deadqueue::unlimited::Queue<Box<dyn Task>>;
@@ -107,15 +111,20 @@ impl<S: TaskStore + 'static> TaskManager<S> {
     }
 
     /// Start task manager with options.
-    /// If started with join set to true, 
+    /// If started with join set to true,
     /// function will block until all worker threads are terminated.
     async fn start_with_options(&self, join: bool) {
-
         // Check if already started
         if *self.started.read().await {
             log::warn!("task manager `{}` is already stared", self.name);
             return;
         }
+
+        log::info!(
+            "starting task manager `{}`, with {} worker(s)",
+            self.name,
+            self.worker_count
+        );
 
         // initialized store
         if let Some(err) = self.store.init().await.err() {
@@ -160,7 +169,7 @@ impl<S: TaskStore + 'static> TaskManager<S> {
                         }
 
                         log::info!(
-                            "starting task {} with id {} on task manager {}, worker: {}",
+                            "starting task `{}` with id `{}` on task manager `{}`, worker: {}",
                             task.name(),
                             task.id(),
                             name,
@@ -171,7 +180,7 @@ impl<S: TaskStore + 'static> TaskManager<S> {
                         task.run().await;
 
                         log::info!(
-                            "finished task {} with id {} on task manager {}, worker: {}",
+                            "finished task `{}` with id `{}` on task manager `{}`, worker: {}",
                             task.name(),
                             task.id(),
                             name,
@@ -200,7 +209,6 @@ impl<S: TaskStore + 'static> TaskManager<S> {
                 results.push(handle.await.unwrap());
             }
         }
-        
     }
 
     /// Stop task manager.
@@ -231,7 +239,6 @@ impl<S: TaskStore + 'static> TaskManager<S> {
                 );
                 vec![]
             }
-        
         }
     }
 }
