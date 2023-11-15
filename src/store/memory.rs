@@ -34,7 +34,7 @@ impl TaskStore for InMemoryTaskStore {
         // Nothing to initialize
         Ok(())
     }
-    async fn save_state(&self, task: &dyn Task) -> Result<TaskState, TaskStoreError> {
+    async fn save_state<O: Default>(&self, task: &dyn Task<O>) -> Result<TaskState, TaskStoreError> {
         // Insert new task state
         let state = TaskState {
             id: None,
@@ -50,7 +50,7 @@ impl TaskStore for InMemoryTaskStore {
         Ok(state)
     }
 
-    async fn delete_state(&self, task: &dyn Task) -> Result<(), TaskStoreError> {
+    async fn delete_state<O: Default>(&self, task: &dyn Task<O>) -> Result<(), TaskStoreError> {
         match self.get_state(task).await? {
             Some(s) => {
                 self.states.write().await.remove(&s);
@@ -64,7 +64,7 @@ impl TaskStore for InMemoryTaskStore {
         }
     }
 
-    async fn get_state(&self, task: &dyn Task) -> Result<Option<TaskState>, TaskStoreError> {
+    async fn get_state<O: Default>(&self, task: &dyn Task<O>) -> Result<Option<TaskState>, TaskStoreError> {
         Ok(self
             .states
             .read()
@@ -78,9 +78,9 @@ impl TaskStore for InMemoryTaskStore {
         Ok(self.states.read().await.len())
     }
 
-    async fn update_status(
+    async fn update_status<O: Default>(
         &self,
-        task: &dyn Task,
+        task: &dyn Task<O>,
         status: TaskStatus,
     ) -> Result<(), TaskStoreError> {
         match self.get_state(task).await? {

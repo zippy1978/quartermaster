@@ -66,9 +66,9 @@ impl TaskStore for MongoDBTaskStore {
         Ok(())
     }
 
-    async fn save_state(
+    async fn save_state<O: Default>(
         &self,
-        task: &dyn crate::task::Task,
+        task: &dyn crate::task::Task<O>,
     ) -> Result<super::TaskState, super::TaskStoreError> {
         // Create state
         let state = TaskState {
@@ -90,9 +90,9 @@ impl TaskStore for MongoDBTaskStore {
         Ok(result.unwrap())
     }
 
-    async fn delete_state(
+    async fn delete_state<O: Default>(
         &self,
-        task: &dyn crate::task::Task,
+        task: &dyn crate::task::Task<O>,
     ) -> Result<(), super::TaskStoreError> {
         // Retrieve task state
         if let Some(state) = self.get_state(task).await? {
@@ -104,9 +104,9 @@ impl TaskStore for MongoDBTaskStore {
         Ok(())
     }
 
-    async fn get_state(
+    async fn get_state<O: Default>(
         &self,
-        task: &dyn crate::task::Task,
+        task: &dyn crate::task::Task<O>,
     ) -> Result<Option<super::TaskState>, super::TaskStoreError> {
         let col = self.collection();
         let state = col
@@ -126,9 +126,9 @@ impl TaskStore for MongoDBTaskStore {
         Ok(count as usize)
     }
 
-    async fn update_status(
+    async fn update_status<O: Default>(
         &self,
-        task: &dyn crate::task::Task,
+        task: &dyn crate::task::Task<O>,
         status: super::TaskStatus,
     ) -> Result<(), super::TaskStoreError> {
         // Retrieve task state

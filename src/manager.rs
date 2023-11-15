@@ -1,5 +1,4 @@
 use std::sync::Arc;
-
 use async_trait::async_trait;
 use tokio::sync::RwLock;
 
@@ -11,14 +10,19 @@ use crate::{
     task::Task,
 };
 
-type TaskQueue = deadqueue::unlimited::Queue<Box<dyn Task>>;
+type TaskQueue<O> = deadqueue::unlimited::Queue<Box<dyn Task<O>>>;
+
 
 /// Stop task is a system task.
 /// It is used to shutdown the task manger.
-struct StopTask {}
+#[derive(Default)]
+struct StopTask<O> {
+    _output: O,
+}
 
 #[async_trait]
-impl Task for StopTask {
+impl<O: Send + Sync + Default> Task<O> for StopTask<O> {
+
     fn name(&self) -> String {
         "stop".to_string()
     }
@@ -27,17 +31,16 @@ impl Task for StopTask {
         "stop".to_string()
     }
 
-    async fn run(&self) {}
 }
 
 /// Task manager.
 /// In charge of handling tasks by assigning them to worker threads.
-pub struct TaskManager<S>
+pub struct TaskManager<S, O>
 where
     S: TaskStore,
 {
     /// Task queue.
-    queue: Arc<TaskQueue>,
+    queue: Arc<TaskQueue<O>>,
     /// Task manager name.
     name: String,
     /// Number of workers for this task manager.
@@ -48,7 +51,7 @@ where
     started: Arc<RwLock<bool>>,
 }
 
-impl<S: TaskStore + 'static> TaskManager<S> {
+impl<S: TaskStore + 'static, O: Default + 'static + Send + Sync> TaskManager<S, O> {
     /// Create a new task manager.
     pub fn new(store: S, worker_count: usize) -> Self {
         Self {
@@ -61,7 +64,7 @@ impl<S: TaskStore + 'static> TaskManager<S> {
     }
 
     /// Run an task.
-    pub async fn run(&self, task: Box<dyn Task + Send + Sync>) {
+    pub async fn run(&self, task: Box<dyn Task<O>>) {
         // Check if task is already known
         match self.store.get_state(task.as_ref()).await {
             Ok(r) => {
@@ -212,8 +215,8 @@ impl<S: TaskStore + 'static> TaskManager<S> {
     }
 
     /// Stop task manager.
-    pub async fn stop(&self) {
-        self.queue.push(Box::new(StopTask {}));
+    pub async fn stop(&self) { 
+        self.queue.push(Box::new(StopTask::default()));
     }
 
     /// Clear task manager task states.
