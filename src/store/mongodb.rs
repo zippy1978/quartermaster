@@ -62,7 +62,7 @@ impl TaskStore for MongoDBTaskStore {
             .keys(doc! {"task_id": 1u32, "task_name": 1u32})
             .options(IndexOptions::builder().unique(true).build())
             .build();
-        col.create_index(model, None).await?;
+        col.create_index(model).await?;
         Ok(())
     }
 
@@ -83,9 +83,9 @@ impl TaskStore for MongoDBTaskStore {
 
         // Store state
         let col = self.collection();
-        let inserted = col.insert_one(state, None).await?;
+        let inserted = col.insert_one(state).await?;
         let filter = doc! {"_id": inserted.inserted_id};
-        let result = col.find_one(filter, None).await?;
+        let result = col.find_one(filter).await?;
 
         Ok(result.unwrap())
     }
@@ -99,7 +99,7 @@ impl TaskStore for MongoDBTaskStore {
             // Delete
             let col = self.collection();
             let filter = doc! {"_id": state.id};
-            col.find_one_and_delete(filter, None).await?;
+            col.find_one_and_delete(filter).await?;
         }
         Ok(())
     }
@@ -111,18 +111,16 @@ impl TaskStore for MongoDBTaskStore {
         let col = self.collection();
         let state = col
             .find_one(
-                doc! {"task_manager": &self.manager, "task_name": task.name(), "task_id": task.id()},
-                None,
+                doc! {"task_manager": &self.manager, "task_name": task.name(), "task_id": task.id()}
             )
             .await?;
         Ok(state)
     }
 
     async fn count_tasks(&self) -> Result<usize, super::TaskStoreError> {
-       
         // find for current manager
         let col = self.collection();
-        let count = col.count_documents(doc! {"instance": &self.instance}, None).await?;
+        let count = col.count_documents(doc! {"instance": &self.instance}).await?;
         Ok(count as usize)
     }
 
@@ -139,7 +137,7 @@ impl TaskStore for MongoDBTaskStore {
             let update = doc! {"$set": {
                 "status": status}
             };
-            col.update_one(filter, update, None).await?;
+            col.update_one(filter, update).await?;
         }
         Ok(())
     }
@@ -147,14 +145,14 @@ impl TaskStore for MongoDBTaskStore {
     async fn clear(&self) -> Result<(), super::TaskStoreError> {
         let col = self.collection();
         let filter = doc! {"instance": &self.instance};
-        col.delete_many(filter, None).await?;
+        col.delete_many(filter).await?;
         Ok(())
     }
 
     async fn get_all_states(&self) -> Result<Vec<super::TaskState>, super::TaskStoreError> {
         let col = self.collection();
         let filter = doc! {"instance": &self.instance};
-        let states = col.find(filter, None).await?.try_collect().await?;
+        let states = col.find(filter).await?.try_collect().await?;
         Ok(states)
     }
 }
